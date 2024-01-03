@@ -5,7 +5,7 @@ use std::{
   process::{exit, Command},
 };
 
-use rustc_session::{config::ErrorOutputType, EarlyErrorHandler};
+use rustc_session::{config::ErrorOutputType, EarlyDiagCtxt};
 use rustc_tools_util::VersionInfo;
 
 use super::plugin::{RustcPlugin, PLUGIN_ARGS};
@@ -100,7 +100,7 @@ impl rustc_driver::Callbacks for DefaultCallbacks {}
 
 /// The top-level function that should be called by your internal driver binary.
 pub fn driver_main<T: RustcPlugin>(plugin: T) {
-  let handler = EarlyErrorHandler::new(ErrorOutputType::default());
+  let handler = EarlyDiagCtxt::new(ErrorOutputType::default());
   rustc_driver::init_rustc_env_logger(&handler);
 
   exit(rustc_driver::catch_with_exit_code(move || {

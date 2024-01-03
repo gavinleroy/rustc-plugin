@@ -526,10 +526,10 @@ impl<'tcx> TypeVisitor<TyCtxt<'tcx>> for CollectRegions<'tcx> {
         StoppingCondition::BeforeRefs => {}
       },
 
-      TyKind::Closure(_, substs) | TyKind::Generator(_, substs, _) => {
-        self.visit_ty(substs.as_closure().tupled_upvars_ty());
-      }
-
+      // TODO(gavinleroy) this changed in recent rustc versions
+      // TyKind::Closure(_, substs) | TyKind::Generator(_, substs, _) => {
+      //   self.visit_ty(substs.as_closure().tupled_upvars_ty());
+      // }
       TyKind::RawPtr(TypeAndMut { ty, .. }) => {
         self.visit_region(Region::new_var(tcx, UNKNOWN_REGION));
         self.place_stack.push(ProjectionElem::Deref);
@@ -595,7 +595,7 @@ impl<'tcx> TypeVisitor<TyCtxt<'tcx>> for CollectRegions<'tcx> {
     let region = match region.kind() {
       RegionKind::ReVar(region) => region,
       RegionKind::ReStatic => RegionVid::from_usize(0),
-      RegionKind::ReErased | RegionKind::ReLateBound(_, _) => {
+      RegionKind::ReErased => {
         return ControlFlow::Continue(());
       }
       _ => unreachable!("{:?}: {:?}", self.ty_stack.first().unwrap(), region),

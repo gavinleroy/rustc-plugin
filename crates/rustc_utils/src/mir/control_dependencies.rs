@@ -8,11 +8,8 @@
 
 use std::fmt;
 
-use rustc_data_structures::graph::{
-  dominators::{Dominators, Iter as DominatorsIter},
-  vec_graph::VecGraph,
-  *,
-};
+use dominators_ext::{DominatorsExt, Iter as DominatorsIter};
+use rustc_data_structures::graph::{dominators::Dominators, vec_graph::VecGraph, *};
 use rustc_index::{
   bit_set::{BitSet, HybridBitSet, SparseBitMatrix},
   Idx,
@@ -197,6 +194,44 @@ impl<Node: Idx + Ord> ControlDependencies<Node> {
   /// Returns the set of all node that are control-dependent on the given `node`.
   pub fn dependent_on(&self, node: Node) -> Option<&HybridBitSet<Node>> {
     self.0.row(node)
+  }
+}
+
+mod dominators_ext {
+  use super::*;
+
+  pub struct Iter<'dom, Node: Idx> {
+    dom_tree: &'dom Dominators<Node>,
+    node: Option<Node>,
+  }
+
+  impl<'dom, Node: Idx> Iterator for Iter<'dom, Node> {
+    type Item = Node;
+
+    fn next(&mut self) -> Option<Self::Item> {
+      if let Some(node) = self.node {
+        self.node = self.dom_tree.immediate_dominator(node);
+        Some(node)
+      } else {
+        None
+      }
+    }
+  }
+
+  pub trait DominatorsExt<Node: Idx> {
+    fn dominators(&self, node: Node) -> Iter<'_, Node>;
+  }
+
+  impl<Node: Idx> DominatorsExt<Node> for Dominators<Node> {
+    /// Provides an iterator over each dominator up the CFG, for the given Node.
+    /// See the `impl Iterator for Iter` definition to understand how this works.
+    fn dominators(&self, node: Node) -> Iter<'_, Node> {
+      assert!(self.is_reachable(node), "node {node:?} is not reachable");
+      Iter {
+        dom_tree: self,
+        node: Some(node),
+      }
+    }
   }
 }
 
